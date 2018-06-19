@@ -1238,6 +1238,41 @@ class DeviceMgrImp {
     }
     RETURN_OK_STATUS();
   }
+  Status register_read_one(p4_id_t register_id,
+                          const p4::RegisterEntry &register_entry,
+                          const SessionTemp &session,
+                          p4::ReadResponse *response) const {
+    if (register_entry.has_index()) {
+      if (register_entry.index().index() < 0) {
+        RETURN_ERROR_STATUS(Code::INVALID_ARGUMENT,
+                            "A negative number is not a valid index value");
+      }
+      auto entry = response->add_entities()->mutable_register_entry();
+      entry->CopyFrom(register_entry);
+      return register_read_one_index(); // TODO
+    } else {  // unset index, read all cells of one register
+
+    }
+  }
+
+  Status register_read(const p4::RegisterEntry &register_entry,
+                      const SessionTemp &session,
+                      p4::ReadResponse *response) const {
+    auto register_id = register_entry.register_id();
+    if (register_id == 0) {  // read all entries for all registers
+      RETURN_ERROR_STATUS(Code::INVALID_ARGUMENT,
+                            "Debug, not support to read all registers at the same time");
+    } else {  // read for a single counter
+      if (check_p4_id(register_id, p4::config::P4Ids::REGISTER)) {
+        return make_invalid_p4_id_status();
+      }
+      auto status = register_read_one(
+          register_id, register_entry, session, response);
+      if (IS_ERROR(status)) return status;
+    }
+
+    RETURN_OK_STATUS();
+  }
 
   Status direct_counter_read_one(const p4v1::TableEntry &table_entry,
                                  const SessionTemp &session,
@@ -1355,8 +1390,7 @@ class DeviceMgrImp {
                               "ValueSet reads are not supported yet");
         break;
       case p4v1::Entity::kRegisterEntry:
-        status = ERROR_STATUS(Code::UNIMPLEMENTED,
-                              "Register reads are not supported yet");
+        status = register_read(entity.register_entry(), session, response);
         break;
       case p4v1::Entity::kDigestEntry:
         status = ERROR_STATUS(Code::UNIMPLEMENTED,
@@ -1950,6 +1984,11 @@ class DeviceMgrImp {
     return (it == action_profs.end()) ? nullptr : it->second.get();
   }
 
+  void register_data_pi_to_proto(const pi_register_data_t &pi_data,
+                                p4::P4Data *data) const {
+    data->set_bitstring(pi_data.data_->bitstring_);
+  }
+
   void counter_data_pi_to_proto(const pi_counter_data_t &pi_data,
                                 p4v1::CounterData *data) const {
     if (pi_data.valid & PI_COUNTER_UNIT_PACKETS)
@@ -2044,6 +2083,29 @@ class DeviceMgrImp {
                           "Error when reading counter from target");
     }
     counter_data_pi_to_proto(counter_data, entry->mutable_data());
+    RETURN_OK_STATUS();
+  }
+
+  Status register_read_one_index(const SessionTemp &session, uint32_t register_id,
+                                p4::RegisterEntry *entry,
+                                bool hw_sync = false) {
+    // checked by caller
+    assert(entry->has_index() && entry->index().index() >= 0);
+    auto index = static_cast<size_t>(entry->index().index());
+    
+    //TODO : NEED?
+    // int flags = hw_sync ? PI_COUNTER_FLAGS_HW_SYNC : PI_COUNTER_FLAGS_NONE;
+    
+    pi_register_data_t register_data;\
+    pi_status_t pi_status = pi_register_read(session.get(), device_tgt,
+                                             register_id, index,
+                                             &register_data);
+    if (pi_status != PI_STATUS_SUCCESS) {
+      RETURN_ERROR_STATUS(Code::UNKNOWN,
+                          "Error when reading register from target. - register_read_one_index()");
+    }
+    
+    register_data_pi_to_proto(register_data, entry->mutable_data());
     RETURN_OK_STATUS();
   }
 

@@ -26,6 +26,7 @@
 #include "pi_act_prof.h"
 #include "pi_base.h"
 #include "pi_counter.h"
+#include "pi_register.h"
 #include "pi_meter.h"
 #include "pi_tables.h"
 

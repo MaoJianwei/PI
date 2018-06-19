@@ -8,6 +8,7 @@ PI/pi_tables.h \
 PI/pi_value.h \
 PI/pi_act_prof.h \
 PI/pi_counter.h \
+PI/pi_register.h \
 PI/pi_meter.h \
 PI/pi_learn.h
 
@@ -19,6 +20,7 @@ PI/p4info/actions.h \
 PI/p4info/tables.h \
 PI/p4info/act_profs.h \
 PI/p4info/counters.h \
+PI/p4info/registers.h \
 PI/p4info/meters.h
 
 nobase_include_HEADERS += \
@@ -31,5 +33,6 @@ PI/target/pi_imp.h \
 PI/target/pi_tables_imp.h \
 PI/target/pi_act_prof_imp.h \
 PI/target/pi_counter_imp.h \
+PI/target/pi_register_imp.h \
 PI/target/pi_meter_imp.h \
 PI/target/pi_learn_imp.h
